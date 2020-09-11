@@ -334,7 +334,7 @@ ggplot() +
 # and discuss which is likely appropriate for this analysis
 
 # Create an sf object with ONLY the unioned buffer
-buffer <- filter(septaBuffers, Legend=="Unioned Buffer")
+buffer <- filter(PDXBuffers, Legend=="Unioned Buffer")
 
 # Clip the 2009 tracts ... by seeing which tracts intersect (st_intersection)
 # with the buffer and clipping out only those areas
@@ -359,83 +359,7 @@ selectCentroids <-
   dplyr::select(TotalPop) %>%
   mutate(Selection_Type = "Select by Centroids")
 
-# Exercise - Can you create a small multiple map of the three types of operations?
-# Consult the text for some operations you can try 
-# This is to be done in breakout groups - code will up uploaded to piazza
 
-
-#Using AllTracts.group
-
-E <- 
-  ggplot() +                                                             #create plot
-  geom_sf(data = allTracts.group, aes(fill = q5(Med_Rent.inf))) +            #make a geometry out of totalpop, using estimate in quintile breaks
-  scale_fill_manual(values = palette5,                                   #scale should use pallete5 for values
-                    labels = qBr(totalPop09, "estimate"),                #label quintile breaks
-                    name = "Popluation\n(Quintile Breaks)") +            #label should read as "[NAME]" 
-  labs(title = "Total Population", subtitle = "Philadelphia; 2009") +    #using these titles
-  mapTheme() + theme(plot.title = element_text(size=22))            
-
-
-
-E <- 
-  ggplot() +                                                             #create plot
-  geom_sf(data = allTracts.group, aes(fill = q5(MedRent.inf))) +            #make a geometry out of totalpop, using estimate in quintile breaks
-  filter(year == "2009")  +
-  scale_fill_manual(values = palette5) +            #label should read as "[NAME]" 
-  labs(title = "Median Rent", subtitle = "2009") +    #using these titles
-  mapTheme() + theme(plot.title = element_text(size=22))  
-
-G <- 
-  ggplot() +                                                             #create plot
-  geom_sf(data = allTracts.group, aes(fill = q5(MedRent.inf))) +            #make a geometry out of totalpop, using estimate in quintile breaks
-  filter(year == "2017")  +
-  scale_fill_manual(values = palette5) +            #label should read as "[NAME]" 
-  labs(title = "Median Rent", subtitle = "2017") +    #using these titles
-  mapTheme() + theme(plot.title = element_text(size=22))  
-
-
-G
-
-
-E
-
-
-ggplot() +
-  geom_sf(data=allTracts.group) +
-  geom_sf(data=allTracts.group, show.legend = "point") +
-  facet_wrap(~Legend) +                                              #how we make a separate plot for each point (ie, small, multiple plots)
-  labs(caption = "Figure 2.6") +
-  mapTheme()
-
-
-
-
-
-###### CORRECT SOLUTION ####### 
-
-ggplot(allTracts.group)+
-  geom_sf(data = st_union(tracts09))+
-  geom_sf(aes(fill = TOD)) +
-  labs(title = "Time/Space Groups") +
-  facet_wrap(~year)+
-  mapTheme() + 
-  theme(plot.title = element_text(size=22))
-
-
-ggplot(allTracts.group)+
-  geom_sf(data = st_union(tracts09))+
-  geom_sf(aes(fill = q5(MedRent.inf))) +
-  geom_sf(data = buffer, fill = "transparent", color = "red")+
-  scale_fill_manual(values = palette5,
-                    labels = qBr(allTracts.group, "MedRent.inf"),
-                    name = "Rent\n(Quintile Breaks)") +
-  labs(title = "Median Rent 2009-2017", subtitle = "Real Dollars") +
-  facet_wrap(~year)+
-  mapTheme() + 
-  theme(plot.title = element_text(size=22))
-
-
-#How to ask good questions!!  https://piazza.com/class/kdae6bghn3qk6?cid=8
 
 
 
@@ -460,6 +384,40 @@ allTracts.group <-
       st_sf() %>%
       mutate(TOD = "Non-TOD")) %>%
   mutate(MedRent.inf = ifelse(year == "2009", MedRent * 1.14, MedRent))    #relevant inflation adjustment
+
+
+
+
+# Exercise - Can you create a small multiple map of the three types of operations?
+# Consult the text for some operations you can try 
+# This is to be done in breakout groups - code will up uploaded to piazza
+
+
+#Using AllTracts.group
+
+ggplot(allTracts.group)+
+  geom_sf(data = st_union(tracts09))+
+  geom_sf(aes(fill = TOD)) +
+  labs(title = "Time/Space Groups") +
+  facet_wrap(~year)+
+  mapTheme() + 
+  theme(plot.title = element_text(size=22))
+
+
+ggplot(allTracts.group)+
+  geom_sf(data = st_union(tracts09))+
+  geom_sf(aes(fill = q5(MedRent.inf))) +
+  geom_sf(data = buffer, fill = "transparent", color = "red")+
+  scale_fill_manual(values = palette5,
+                    labels = qBr(allTracts.group, "MedRent.inf"),
+                    name = "Rent\n(Quintile Breaks)") +
+  labs(title = "Median Rent 2009-2017", subtitle = "Real Dollars") +
+  facet_wrap(~year)+
+  mapTheme() + 
+  theme(plot.title = element_text(size=22))
+
+
+#How to ask good questions!!  https://piazza.com/class/kdae6bghn3qk6?cid=8
 
 # Can you try to create the maps seen in the text?
 # The solutions are contained in "map_exercise.R"
@@ -514,7 +472,7 @@ allTracts.Summary %>%
   facet_wrap(~Variable, scales = "free", ncol=5) +
   scale_fill_manual(values = c("#bae4bc", "#0868ac")) +
   labs(title = "Indicator differences across time and space") +
-  plotTheme() + theme(legend.position="bottom")
+  plotTheme() + theme(legend.position="bottom") 
 
 # Examining three submarkets
 
@@ -541,7 +499,7 @@ threeMarkets <- rbind(el, broad.st, centerCity)
 
 # You can then bind these buffers to tracts and map them or make small multiple plots
 
-allTracts.threeMarkets <-
+allTracts.threeMarkets <- 
   st_join(st_centroid(allTracts), threeMarkets) %>%
   st_drop_geometry() %>%
   left_join(allTracts) %>%
