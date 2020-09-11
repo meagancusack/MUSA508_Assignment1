@@ -89,6 +89,10 @@ census_api_key("e90c5bc9f1d1e33d8cdfd56b8df26814d394cda9", overwrite = TRUE, ins
 
 
 
+
+
+
+
 ##### Year 2009 tracts #####
 
 # We run our year 2000 code using 2009 ACS (and ACS variables from our 2017 list)
@@ -96,7 +100,7 @@ census_api_key("e90c5bc9f1d1e33d8cdfd56b8df26814d394cda9", overwrite = TRUE, ins
 
 ?load_variables #allows you to view variables - go to help on side menu to see how it's done
 
-# Requesting ACS data for 9 variables from 2009 in Philadelphia, PA at the census tract level
+# Requesting ACS data for 9 variables from 2009 in Portland, OR at the census tract level
 # %>% is an operator known as a pipe that chains functions together; creates dataframe with geometry attahced to it
 # transform is for spatial projection
 
@@ -104,8 +108,9 @@ tracts09 <-
   get_acs(geography = "tract", variables = c("B25026_001E","B02001_002E","B15001_050E",
                                              "B15001_009E","B19013_001E","B25058_001E",
                                              "B06012_002E"), 
-                year=2009, state=42, county=101, geometry=T) %>% 
+                year=2009, state="Oregon", county="Multnomah", geometry=T) %>% 
   st_transform('ESRI:102728')
+
 
 # shown in "long data" meaning each variable has its own row - allows for small, multiple plots
 # in "wide data" each variable has its own column
@@ -243,7 +248,7 @@ tracts17 <-
   get_acs(geography = "tract", variables = c("B25026_001E","B02001_002E","B15001_050E",
                                              "B15001_009E","B19013_001E","B25058_001E",
                                              "B06012_002E"), 
-          year=2017, state=42, county=101, geometry=T, output="wide") %>%
+          year=2017, state=41, county=051, geometry=T, output="wide") %>%
   st_transform('ESRI:102728') %>%
   rename(TotalPop = B25026_001E, 
          Whites = B02001_002E,
@@ -279,20 +284,23 @@ septaStops <-
       select(Station, Line)) %>%
   st_transform(st_crs(tracts09))  
 
-View(septaStops)
+
+PDXlightrail <- 
+  rbind(
+    st_read("https://opendata.arcgis.com/datasets/f9c61dec4ea142a6b031e0fb2119f1e7_53.geojson")) %>%
+  st_transform(st_crs(tracts09))  
+
+View(PDXlightrail)
 
 
 # Let's visualize it
 
 ggplot() + 
   geom_sf(data=st_union(tracts09)) +
-  geom_sf(data=septaStops, 
-          aes(colour = Line), 
-          show.legend = "point", size= 2) +
-  scale_colour_manual(values = c("orange","blue")) +
-  labs(title="Septa Stops", 
-       subtitle="Philadelphia, PA", 
-       caption="Figure 2.5") +
+  geom_sf(data=PDXlightrail, size= 2) +
+  labs(title="Lighrail Stations", 
+       subtitle="Portland, OR", 
+       caption="Figure 1") +
   mapTheme()
 
 # --- Relating SEPTA Stops and Tracts ----
@@ -301,12 +309,12 @@ ggplot() +
 # Both a buffer for each stop, and a union of the buffers...           #sf object contains buffered geometries
 # and bind these objects together
 
-septaBuffers <- 
+PDXBuffers <- 
   rbind(
-    st_buffer(septaStops, 2640) %>%
+    st_buffer(PDXlightrail, 2640) %>%
       mutate(Legend = "Buffer") %>%
       dplyr::select(Legend),
-    st_union(st_buffer(septaStops, 2640)) %>%
+    st_union(st_buffer(PDXlightrail, 2640)) %>%
       st_sf() %>%
       mutate(Legend = "Unioned Buffer"))
 
@@ -314,8 +322,8 @@ septaBuffers <-
 # "facet_wrap" plot showing each
 
 ggplot() +
-  geom_sf(data=septaBuffers) +
-  geom_sf(data=septaStops, show.legend = "point") +
+  geom_sf(data=PDXBuffers) +
+  geom_sf(data=PDXlightrail, show.legend = "point") +
   facet_wrap(~Legend) +                                              #how we make a separate plot for each point (ie, small, multiple plots)
   labs(caption = "Figure 2.6") +
   mapTheme()
