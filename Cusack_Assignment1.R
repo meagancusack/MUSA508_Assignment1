@@ -1,5 +1,5 @@
 # Meagan Cusack
-# Assignment 1
+# Assignment 1 
 
 # Note that 2000 decennial census API endpoints are down at the moment,
 # This code replaces 2000 API data with 2009 so that the demo runs smoothly
@@ -88,11 +88,6 @@ palette5 <- c("#f0f9e8","#bae4bc","#7bccc4","#43a2ca","#0868ac")
 census_api_key("e90c5bc9f1d1e33d8cdfd56b8df26814d394cda9", overwrite = TRUE, install = TRUE) 
 
 
-
-
-
-
-
 ##### Year 2009 tracts #####
 
 # We run our year 2000 code using 2009 ACS (and ACS variables from our 2017 list)
@@ -100,8 +95,10 @@ census_api_key("e90c5bc9f1d1e33d8cdfd56b8df26814d394cda9", overwrite = TRUE, ins
 
 ?load_variables #allows you to view variables - go to help on side menu to see how it's done
 
+?get_acs
+
 # Requesting ACS data for 9 variables from 2009 in Portland, OR at the census tract level
-# %>% is an operator known as a pipe that chains functions together; creates dataframe with geometry attahced to it
+# %>% is an operator known as a pipe that chains functions together; creates dataframe with geometry attached to it
 # transform is for spatial projection
 
 tracts09 <-  
@@ -109,17 +106,13 @@ tracts09 <-
                                              "B15001_009E","B19013_001E","B25058_001E",
                                              "B06012_002E"), 
                 year=2009, state="Oregon", county="Multnomah", geometry=T) %>% 
-  st_transform('ESRI:102728')
-
+  st_transform('EPSG:6855')  # Portland, OR coordinate system - https://epsg.io/6855
 
 # shown in "long data" meaning each variable has its own row - allows for small, multiple plots
 # in "wide data" each variable has its own column
 
 # Wide data vs long data (and spread vs gather)
 # https://www.garrickadenbuie.com/project/tidyexplain/images/tidyr-spread-gather.gif
-
-
-
 
 # Referencing the data by matrix notation, and learning about the data...
 # Let's examine each variable and the elements of an sf object
@@ -145,9 +138,6 @@ names(totalPop09)   #names of variables
 head(totalPop09)   #first 6 rows
 
 glimpse(totalPop09)     #provides all the info at once
-
-
-
 
 # Use the base R plotting function to examine it visually
 
@@ -191,15 +181,10 @@ D <-
   scale_fill_manual(values = palette5,                                   #scale should use pallete5 for values
                     labels = qBr(totalPop09, "estimate"),                #label quintile breaks
                     name = "Popluation\n(Quintile Breaks)") +            #label should read as "[NAME]" 
-  labs(title = "Total Population", subtitle = "Philadelphia; 2009") +    #using these titles
+  labs(title = "Total Population", subtitle = "Portland, OR; 2009") +    #using these titles
   mapTheme() + theme(plot.title = element_text(size=22))                 #recipe added from styling options at top of code (giant function)
 
 D
-
-
-
-
-
 
 # Let's "spread" the data into wide form
 
@@ -218,10 +203,6 @@ tracts09 <-
 
 st_drop_geometry(tracts09)[1:3,]
 
-
-
-
-
 # Let's create new rate variables using mutate
 
 tracts09 <- 
@@ -232,14 +213,11 @@ tracts09 <-
          year = "2009") %>%
   dplyr::select(-Whites,-FemaleBachelors,-MaleBachelors,-TotalPoverty)    #retains everything with the exception of the ones with a "-"
 
-
-
-
-
 # Tracts 2009 is now complete. Let's grab 2017 tracts and do a congruent
 # set of operations
 
-# ---- 2017 Census Data -----
+
+##### Year 2017 tracts #####
 
 # Notice that we are getting "wide" data here in the first place
 # This saves us the trouble of using "spread"
@@ -248,8 +226,8 @@ tracts17 <-
   get_acs(geography = "tract", variables = c("B25026_001E","B02001_002E","B15001_050E",
                                              "B15001_009E","B19013_001E","B25058_001E",
                                              "B06012_002E"), 
-          year=2017, state=41, county=051, geometry=T, output="wide") %>%
-  st_transform('ESRI:102728') %>%
+          year=2017, state="Oregon", county="Multnomah", geometry=T, output="wide") %>%
+  st_transform('EPSG:6855') %>%
   rename(TotalPop = B25026_001E, 
          Whites = B02001_002E,
          FemaleBachelors = B15001_050E, 
@@ -264,17 +242,15 @@ tracts17 <-
          year = "2017") %>%
   dplyr::select(-Whites, -FemaleBachelors, -MaleBachelors, -TotalPoverty) 
 
-# --- Combining 09 and 17 data ----
+
+##### Combining 2009 and 2017 data ######
 
 allTracts <- rbind(tracts09,tracts17)    #appending them one on top of the other; not "joined" by a specific variable
 
 
+##### Transit Data #####
 
-
-
-# ---- Wrangling Transit Open Data -----
-
-septaStops <- 
+septaStops <-   # NEED TO FIGURE OUT HOW TO SHOW DIFF LINES IN PDX!!!
   rbind(
     st_read("https://opendata.arcgis.com/datasets/8c6e2575c8ad46eb887e6bb35825e1a6_0.geojson") %>% 
       mutate(Line = "El") %>%
@@ -303,10 +279,10 @@ ggplot() +
        caption="Figure 1") +
   mapTheme()
 
-# --- Relating SEPTA Stops and Tracts ----
+# Relating lightrail and census tracts
 
-# Create buffers (in feet - note the CRS) around Septa stops -         #using sf package, projected in "feet" ; half mile is 2640 feet
-# Both a buffer for each stop, and a union of the buffers...           #sf object contains buffered geometries
+# Create buffers (in feet - note the CRS) around rail stops -         #using sf package, projected in "feet" ; half mile is 2640 feet
+# Both a buffer for each stop, and a union of the buffers...          #sf object contains buffered geometries
 # and bind these objects together
 
 PDXBuffers <- 
@@ -320,7 +296,7 @@ PDXBuffers <-
 
 # Let's examine both buffers by making a small multiple
 # "facet_wrap" plot showing each
-
+ 
 ggplot() +
   geom_sf(data=PDXBuffers) +
   geom_sf(data=PDXlightrail, show.legend = "point") +
@@ -328,22 +304,25 @@ ggplot() +
   labs(caption = "Figure 2.6") +
   mapTheme()
 
-# ---- Spatial operations ----
+# Spatial operations
 
 # Consult the text to understand the difference between these three types of joins
 # and discuss which is likely appropriate for this analysis
 
 # Create an sf object with ONLY the unioned buffer
+
 buffer <- filter(PDXBuffers, Legend=="Unioned Buffer")
 
 # Clip the 2009 tracts ... by seeing which tracts intersect (st_intersection)
 # with the buffer and clipping out only those areas
+
 clip <- 
   st_intersection(buffer, tracts09) %>%
   dplyr::select(TotalPop) %>%
   mutate(Selection_Type = "Clip")
 
 # Do a spatial selection to see which tracts touch the buffer
+
 selection <- 
   tracts09[buffer,] %>%
   dplyr::select(TotalPop) %>%
@@ -351,6 +330,7 @@ selection <-
 
 # Do a centroid-in-polygon join to see which tracts have their centroid in the buffer
 # Note the st_centroid call creating centroids for each feature
+
 selectCentroids <-
   st_centroid(tracts09)[buffer,] %>%
   st_drop_geometry() %>%
@@ -359,11 +339,7 @@ selectCentroids <-
   dplyr::select(TotalPop) %>%
   mutate(Selection_Type = "Select by Centroids")
 
-
-
-
-
-# ---- Indicator Maps ----
+# Indicator Maps
 
 # We do our centroid joins as above, and then do a "disjoin" to get the ones that *don't*
 # join, and add them all together.
@@ -474,7 +450,7 @@ allTracts.Summary %>%
   labs(title = "Indicator differences across time and space") +
   plotTheme() + theme(legend.position="bottom") 
 
-# Examining three submarkets
+# Examining three submarkets   # NEED TO CREATE MARKETS FOR PDX!!!
 
 centerCity <-
   st_intersection(
